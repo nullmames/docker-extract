@@ -76,27 +76,27 @@ This guide explains how to deploy the Docker Binary Extractor on an Ubuntu serve
    nano docker-compose.yml
    ```
 
-   Paste the following configuration, adjusting as needed:
+   Paste the following configuration exactly as shown, maintaining the same indentation (spaces, not tabs):
 
    ```yaml
    version: '3.8'
 
    services:
      docker-extractor:
-       image: ghcr.io/nullmames/docker-extract:v1.1.1  # Use the latest tag
+       image: ghcr.io/nullmames/docker-extract:v1.1.1
        container_name: docker-extractor
        restart: unless-stopped
        volumes:
-         - /var/run/docker.sock:/var/run/docker.sock  # Required for Docker access
-         - ./data:/data  # Persistent storage for extracted binaries
+         - /var/run/docker.sock:/var/run/docker.sock
+         - ./data:/data
        ports:
-         - "5050:5050"  # Web interface port
+         - "5050:5050"
        environment:
-         - MODE=both  # Options: extract, web, both
+         - MODE=both
          - CONFIG_PATH=https://raw.githubusercontent.com/nullmames/docker-extract/refs/heads/main/config.yaml
          - OUTPUT_DIR=/data
-         - CHECK_INTERVAL=3600  # Check every hour (in seconds)
-         - DOCKER_PLATFORM_SUPPORT=false  # Important for compatibility
+         - CHECK_INTERVAL=3600
+         - DOCKER_PLATFORM_SUPPORT=false
        networks:
          - extractor-network
 
@@ -105,19 +105,34 @@ This guide explains how to deploy the Docker Binary Extractor on an Ubuntu serve
        driver: bridge
    ```
 
-3. **Create the data directory**
+   Save the file by pressing `Ctrl+X`, then `Y`, then `Enter`.
+
+   > **Note**: If you encounter YAML errors like `yaml: line 2: did not find expected key`, make sure:
+   > - Your text editor is using spaces (not tabs)
+   > - There are no extra spaces at the beginning of any line
+   > - You copied the entire text including the first `version:` line
+
+3. **Alternatively, download the file directly**
+
+   If you're having issues with formatting, you can download the file directly:
+
+   ```bash
+   wget -O docker-compose.yml https://raw.githubusercontent.com/nullmames/docker-extract/main/docker-compose.example.yml
+   ```
+
+4. **Create the data directory**
 
    ```bash
    mkdir -p data
    ```
 
-4. **Start the service**
+5. **Start the service**
 
    ```bash
    docker compose up -d
    ```
 
-5. **Check logs**
+6. **Check logs**
 
    ```bash
    docker compose logs -f

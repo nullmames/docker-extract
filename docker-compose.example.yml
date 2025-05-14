@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  docker-extractor:
+    image: ghcr.io/nullmames/docker-extract:v1.1.1
+    container_name: docker-extractor
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/data
+    ports:
+      - "5050:5050"
+    environment:
+      - MODE=both
+      - CONFIG_PATH=https://raw.githubusercontent.com/nullmames/docker-extract/refs/heads/main/config.yaml
+      - OUTPUT_DIR=/data
+      - CHECK_INTERVAL=3600
+      - DOCKER_PLATFORM_SUPPORT=false
+    networks:
+      - extractor-network
+
+networks:
+  extractor-network:
+    driver: bridge 
