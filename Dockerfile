@@ -23,7 +23,7 @@ COPY templates/ ./templates/
 COPY src/ ./src/
 
 # Install Python dependencies
-RUN pip install --no-cache-dir pyyaml==6.0 --only-binary :all: && \
+RUN pip install --no-cache-dir pyyaml==6.0.2 && \
     pip install --no-cache-dir -r requirements.txt
 
 # Add entrypoint script
