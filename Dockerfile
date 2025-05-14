@@ -23,7 +23,8 @@ COPY templates/ ./templates/
 COPY src/ ./src/
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir pyyaml==6.0 --only-binary :all: && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Add entrypoint script
 COPY docker-entrypoint.sh /docker-entrypoint.sh
