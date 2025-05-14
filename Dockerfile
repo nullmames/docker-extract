@@ -8,7 +8,12 @@ RUN apk add --no-cache \
     docker-cli \
     bash \
     curl \
-    git
+    git \
+    gcc \
+    musl-dev \
+    python3-dev \
+    libffi-dev \
+    openssl-dev
 
 # Copy application files
 COPY requirements.txt .
