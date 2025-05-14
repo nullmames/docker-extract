@@ -62,4 +62,5 @@ if [ "$USE_REPO" = true ] && [ -n "$GITHUB_REPO" ]; then
     python docker_extractor.py --config "$CONFIG_FILE" --output "$OUTPUT_DIR" --repo "$GITHUB_REPO" --interval "$CHECK_INTERVAL"
 else
     echo "Using local configuration file: $CONFIG_FILE"
-    python docker_extractor.py --config "$CONFIG_FILE" --output "$OUTPUT_DIR" --interval "$CHECK_INTERVAL" 
+    python docker_extractor.py --config "$CONFIG_FILE" --output "$OUTPUT_DIR" --interval "$CHECK_INTERVAL"
+fi 
