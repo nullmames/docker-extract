@@ -33,6 +33,7 @@ ENV OUTPUT_DIR=/data
 ENV CONFIG_REPO=
 ENV CHECK_INTERVAL=60
 ENV MODE=extract
+ENV PYTHONUNBUFFERED=1
 
 # Create volume for output data
 VOLUME ["/data"]
