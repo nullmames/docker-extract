@@ -9,6 +9,7 @@ This application extracts binaries from Docker images and provides a web interfa
 - **Continuously monitor config file for changes**
 - **Version control for binaries (keeps old versions)**
 - **Avoids re-downloading existing binaries**
+- **Load configuration from GitHub repositories**
 - Web interface to browse and download extracted binaries
 - API endpoint to access binary metadata
 - Detailed metadata including binary name, Docker image, version, size, etc.
@@ -55,6 +56,19 @@ networks:
 - `docker_image_version`: Docker image tag/version
 - `binary_paths`: Comma-separated list of binary paths to extract
 
+### Using a GitHub Repository for Configuration
+
+You can store your configuration file in a GitHub repository and have the application automatically fetch and use it:
+
+```
+./run_extractor.sh --repo https://github.com/username/repo
+```
+
+This will:
+1. Fetch the `config.yaml` file from the specified repository
+2. Use that configuration for extracting binaries
+3. Periodically check the repository for configuration updates
+
 ## Usage
 
 ### Extract Binaries
@@ -62,10 +76,16 @@ networks:
 Run the extraction script to pull Docker images and extract the binaries:
 
 ```
-./run_extractor.sh
+./run_extractor.sh [options]
 # or
-python docker_extractor.py
+python docker_extractor.py [options]
 ```
+
+Available options:
+- `--config FILE`: Configuration file path (default: config.yaml)
+- `--output DIR`: Output directory (default: extracted_binaries)
+- `--repo URL`: GitHub repository URL for configuration
+- `--interval SEC`: Check interval in seconds (default: 60)
 
 This will:
 1. Create a directory `extracted_binaries` with network subdirectories
@@ -82,10 +102,10 @@ Start the web server to browse and download the extracted binaries:
 ```
 ./run_server.sh
 # or
-python web_server.py
+python web_server.py [port]
 ```
 
-The web interface will be available at http://localhost:5000.
+The web interface will be available at http://localhost:5050 by default.
 
 ## Versioning System
 

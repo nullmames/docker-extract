@@ -8,16 +8,21 @@ import subprocess
 import time
 import hashlib
 import sys
+import requests
+import argparse
+import re
 from datetime import datetime
 from pathlib import Path
 
 
 class DockerExtractor:
-    def __init__(self, config_path, output_dir):
+    def __init__(self, config_path, output_dir, config_repo=None):
         self.config_path = config_path
         self.output_dir = output_dir
+        self.config_repo = config_repo
         self.last_modified_time = 0
         self.processed_binaries = set()
+        self.remote_config_etag = None
 
         # Try to connect to Docker
         try:
@@ -33,7 +38,60 @@ class DockerExtractor:
             print("3. Docker is not installed correctly")
             sys.exit(1)
 
+    def get_github_raw_url(self, repo_url, file_path='config.yaml'):
+        """Convert a GitHub repo URL to a raw content URL for a specific file."""
+        # Extract username and repo name from the GitHub URL
+        match = re.match(r'https://github.com/([^/]+)/([^/]+)', repo_url)
+        if not match:
+            print(f"Invalid GitHub repository URL: {repo_url}")
+            return None
+
+        username, repo_name = match.groups()
+        # Format the raw content URL (using main as the default branch)
+        return f"https://raw.githubusercontent.com/{username}/{repo_name}/main/{file_path}"
+
     def load_config(self):
+        """Load configuration from local file or remote repository."""
+        # Try to load from remote repository if specified
+        if self.config_repo:
+            try:
+                raw_url = self.get_github_raw_url(self.config_repo)
+                if raw_url:
+                    print(f"Fetching configuration from: {raw_url}")
+                    headers = {}
+                    if self.remote_config_etag:
+                        headers['If-None-Match'] = self.remote_config_etag
+
+                    response = requests.get(raw_url, headers=headers)
+
+                    # If content hasn't changed (304 Not Modified)
+                    if response.status_code == 304:
+                        print("Remote configuration unchanged")
+                        # Use local file as fallback
+                        with open(self.config_path, 'r') as file:
+                            return yaml.safe_load(file)
+
+                    # If successful response
+                    if response.status_code == 200:
+                        # Save the ETag for future requests
+                        if 'ETag' in response.headers:
+                            self.remote_config_etag = response.headers['ETag']
+
+                        # Update local config file with the remote content
+                        with open(self.config_path, 'w') as file:
+                            file.write(response.text)
+
+                        print("Updated local configuration from remote repository")
+                        return yaml.safe_load(response.text)
+                    else:
+                        print(
+                            f"Failed to fetch remote configuration: {response.status_code}")
+                        print("Falling back to local configuration file")
+            except Exception as e:
+                print(f"Error fetching remote configuration: {e}")
+                print("Falling back to local configuration file")
+
+        # Load from local file
         try:
             with open(self.config_path, 'r') as file:
                 return yaml.safe_load(file)
@@ -266,12 +324,37 @@ class DockerExtractor:
             return []
 
     def config_modified(self):
-        """Check if the config file has been modified."""
+        """Check if the config file has been modified locally or remotely."""
         try:
+            # Check if local file has been modified
             current_mtime = os.path.getmtime(self.config_path)
-            if current_mtime > self.last_modified_time:
+            local_modified = current_mtime > self.last_modified_time
+
+            # Check if remote config has been modified (if using a repo)
+            remote_modified = False
+            if self.config_repo:
+                raw_url = self.get_github_raw_url(self.config_repo)
+                if raw_url:
+                    headers = {}
+                    if self.remote_config_etag:
+                        headers['If-None-Match'] = self.remote_config_etag
+
+                    try:
+                        response = requests.head(raw_url, headers=headers)
+                        # If status is not 304, the file has changed
+                        remote_modified = response.status_code != 304
+
+                        # Update ETag if available
+                        if response.status_code == 200 and 'ETag' in response.headers:
+                            self.remote_config_etag = response.headers['ETag']
+                    except Exception as e:
+                        print(f"Error checking remote config: {e}")
+
+            # Update last modified time for local file if either source changed
+            if local_modified or remote_modified:
                 self.last_modified_time = current_mtime
                 return True
+
             return False
         except Exception as e:
             print(f"Error checking config modification time: {e}")
@@ -283,16 +366,19 @@ class DockerExtractor:
         print(f"Docker Binary Extractor")
         print(f"{'='*80}")
         print(f"Config file: {self.config_path}")
+        if self.config_repo:
+            print(f"Config repository: {self.config_repo}")
         print(f"Output directory: {self.output_dir}")
         print(f"Platform: linux/amd64 (forced)")
         print(f"Monitoring interval: {interval} seconds")
         print(f"{'='*80}\n")
 
         self.create_output_dirs()
-        self.last_modified_time = os.path.getmtime(self.config_path)
+        if os.path.exists(self.config_path):
+            self.last_modified_time = os.path.getmtime(self.config_path)
         self.extract_binaries()
 
-        print(f"\nMonitoring config file ({self.config_path}) for changes...")
+        print(f"\nMonitoring config file for changes...")
         print(f"Checking every {interval} seconds. Press Ctrl+C to stop.")
 
         try:
@@ -308,10 +394,25 @@ class DockerExtractor:
             print("\nMonitoring stopped. Goodbye!")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='Extract binaries from Docker images based on a configuration file.')
+    parser.add_argument('--config', default='config.yaml',
+                        help='Path to the configuration file')
+    parser.add_argument('--output', default='extracted_binaries',
+                        help='Directory to store extracted binaries')
+    parser.add_argument(
+        '--repo', help='GitHub repository URL for the configuration file')
+    parser.add_argument('--interval', type=int, default=60,
+                        help='Interval in seconds to check for config changes')
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
     try:
-        extractor = DockerExtractor("config.yaml", "extracted_binaries")
-        extractor.monitor()
+        args = parse_args()
+        extractor = DockerExtractor(args.config, args.output, args.repo)
+        extractor.monitor(args.interval)
     except KeyboardInterrupt:
         print("\nProgram interrupted by user. Exiting...")
     except Exception as e:
