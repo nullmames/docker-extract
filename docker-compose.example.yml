@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   docker-extractor:
-    image: ghcr.io/nullmames/docker-extract:v1.1.1
+    image: ghcr.io/nullmames/docker-extract:latest
     container_name: docker-extractor
     restart: unless-stopped
     volumes:

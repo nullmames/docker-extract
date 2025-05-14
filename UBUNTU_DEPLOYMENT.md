@@ -83,7 +83,7 @@ This guide explains how to deploy the Docker Binary Extractor on an Ubuntu serve
 
    services:
      docker-extractor:
-       image: ghcr.io/nullmames/docker-extract:v1.1.1
+       image: ghcr.io/nullmames/docker-extract:latest
        container_name: docker-extractor
        restart: unless-stopped
        volumes:
@@ -111,6 +111,8 @@ This guide explains how to deploy the Docker Binary Extractor on an Ubuntu serve
    > - Your text editor is using spaces (not tabs)
    > - There are no extra spaces at the beginning of any line
    > - You copied the entire text including the first `version:` line
+
+   > **Note about image tags**: The example uses the `latest` tag, which is always available. For production deployments, you might want to use a specific version tag (e.g., `v1.0.4`) once you've tested it works with your configuration.
 
 3. **Alternatively, download the file directly**
 

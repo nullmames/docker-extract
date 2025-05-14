@@ -193,16 +193,60 @@ class MetadataManager:
         Returns:
             Merged metadata list
         """
+        # Ensure both inputs are properly formatted as lists
+        if existing_metadata is None:
+            existing_metadata = []
+        elif isinstance(existing_metadata, dict):
+            existing_metadata = [existing_metadata]
+
+        if new_metadata is None:
+            new_metadata = []
+        elif isinstance(new_metadata, dict):
+            new_metadata = [new_metadata]
+
+        # Ensure existing_metadata is a list
+        if not isinstance(existing_metadata, list):
+            logger.warning(
+                f"Expected list for existing_metadata, got {type(existing_metadata)}. Converting to empty list.")
+            existing_metadata = []
+
+        # Ensure new_metadata is a list
+        if not isinstance(new_metadata, list):
+            logger.warning(
+                f"Expected list for new_metadata, got {type(new_metadata)}. Converting to empty list.")
+            new_metadata = []
+
         combined_metadata = {}
 
-        # Process all metadata entries
-        for item in existing_metadata + new_metadata:
-            if not item:
-                continue
+        # Process all metadata entries with extensive error handling
+        try:
+            # Create a list of all metadata entries
+            all_entries = []
+            all_entries.extend(
+                [entry for entry in existing_metadata if entry and isinstance(entry, dict)])
+            all_entries.extend(
+                [entry for entry in new_metadata if entry and isinstance(entry, dict)])
 
-            # Create a unique key for each entry
-            key = f"{item.get('network', '')}:{item.get('docker_image', '')}:{item.get('docker_version', '')}:{item.get('original_path', '')}"
-            combined_metadata[key] = item
+            # Process each valid entry
+            for item in all_entries:
+                if not isinstance(item, dict):
+                    logger.warning(
+                        f"Skipping non-dict metadata entry: {type(item)}")
+                    continue
+
+                # Create a unique key for each entry (with fallbacks for missing fields)
+                network = item.get('network', '')
+                docker_image = item.get('docker_image', '')
+                docker_version = item.get('docker_version', '')
+                original_path = item.get('original_path', '')
+
+                key = f"{network}:{docker_image}:{docker_version}:{original_path}"
+                combined_metadata[key] = item
+        except Exception as e:
+            logger.error(f"Error during metadata merging: {e}")
+            # If anything fails, just return what we have so far
+            if not combined_metadata:
+                return []
 
         return list(combined_metadata.values())
 
@@ -213,24 +257,61 @@ class MetadataManager:
             new_metadata: New metadata entries to add
         """
         try:
+            # Extensive type checking and conversion
+            if new_metadata is None:
+                logger.info("No metadata to update (None provided)")
+                return
+
             # Ensure new_metadata is a list
             if isinstance(new_metadata, dict):
                 new_metadata = [new_metadata]
+                logger.info("Converted single dict metadata to list")
             elif not isinstance(new_metadata, list):
-                logger.error(f"Invalid metadata type: {type(new_metadata)}")
+                logger.error(
+                    f"Cannot process metadata of type: {type(new_metadata)}")
                 return
 
             # Filter out any None or invalid values
-            filtered_metadata = [
-                item for item in new_metadata if item and isinstance(item, dict)]
+            filtered_metadata = []
+            for item in new_metadata:
+                if item is None:
+                    continue
+                if not isinstance(item, dict):
+                    logger.warning(
+                        f"Skipping non-dict metadata entry: {type(item)}")
+                    continue
+                filtered_metadata.append(item)
 
             if not filtered_metadata:
-                logger.info("No valid metadata to update")
+                logger.info("No valid metadata entries to update")
                 return
 
-            existing_metadata = self.load_global_metadata()
-            merged_metadata = self.merge_metadata(
-                existing_metadata, filtered_metadata)
-            self.save_global_metadata(merged_metadata)
+            # Load existing metadata with robust error handling
+            try:
+                existing_metadata = self.load_global_metadata()
+                if existing_metadata is None:
+                    logger.warning(
+                        "Existing metadata was None, using empty list")
+                    existing_metadata = []
+                elif not isinstance(existing_metadata, list):
+                    logger.warning(
+                        f"Existing metadata was not a list, converting from {type(existing_metadata)}")
+                    if isinstance(existing_metadata, dict):
+                        existing_metadata = [existing_metadata]
+                    else:
+                        existing_metadata = []
+            except Exception as e:
+                logger.error(f"Error loading existing metadata: {e}")
+                existing_metadata = []
+
+            # Merge and save with explicit error handling
+            try:
+                merged_metadata = self.merge_metadata(
+                    existing_metadata, filtered_metadata)
+                self.save_global_metadata(merged_metadata)
+                logger.info(
+                    f"Successfully updated global metadata with {len(filtered_metadata)} new entries")
+            except Exception as e:
+                logger.error(f"Error in merge or save operations: {e}")
         except Exception as e:
-            logger.error(f"Error updating global metadata: {e}")
+            logger.error(f"Unhandled error updating global metadata: {e}")
