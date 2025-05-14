@@ -14,13 +14,48 @@ This application extracts binaries from Docker images and provides a web interfa
 - API endpoint to access binary metadata
 - Detailed metadata including binary name, Docker image, version, size, etc.
 
-## Requirements
+## Using the Docker Container
 
-- Python 3.6+
-- Docker
-- Required Python packages (see `requirements.txt`)
+The easiest way to use Docker Binary Extractor is with the pre-built Docker container:
 
-## Installation
+```bash
+# Run the extractor in extract-only mode:
+docker run -d \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v ./extracted_binaries:/data \
+  -e CONFIG_REPO=https://github.com/nullmames/docker-extract \
+  ghcr.io/nullmames/docker-extract:latest
+
+# Run the web server only:
+docker run -d \
+  -p 5050:5050 \
+  -v ./extracted_binaries:/data \
+  -e MODE=web \
+  ghcr.io/nullmames/docker-extract:latest
+
+# Run both extractor and web server:
+docker run -d \
+  -p 5050:5050 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v ./extracted_binaries:/data \
+  -e MODE=both \
+  -e CONFIG_REPO=https://github.com/nullmames/docker-extract \
+  ghcr.io/nullmames/docker-extract:latest
+```
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CONFIG_PATH` | Path to configuration file inside container | `/app/config.yaml` |
+| `OUTPUT_DIR` | Directory to store extracted binaries | `/data` |
+| `CONFIG_REPO` | GitHub repository URL for configuration | (empty) |
+| `CHECK_INTERVAL` | Interval to check for config changes (seconds) | `60` |
+| `MODE` | Operation mode: `extract`, `web`, or `both` | `extract` |
+
+## Manual Installation
+
+If you prefer to run the application without Docker:
 
 1. Clone this repository
 2. Create and activate a virtual environment:
@@ -69,7 +104,7 @@ This will:
 2. Use that configuration for extracting binaries
 3. Periodically check the repository for configuration updates
 
-## Usage
+## Usage (for manual installation)
 
 ### Extract Binaries
 
