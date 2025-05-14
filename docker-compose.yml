@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  docker-extractor:
+    image: ghcr.io/yourusername/docker-extract:latest # Replace with your actual image
+    container_name: docker-extractor
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Required for Docker access
+      - ./data:/data # Persistent storage for extracted binaries
+      - ./config.yaml:/app/config.yaml # Mount custom config file
+    ports:
+      - "5050:5050" # Web interface port
+    environment:
+      - MODE=both # Options: extract, web, both
+      - CONFIG_PATH=/app/config.yaml
+      - OUTPUT_DIR=/data
+      - CHECK_INTERVAL=3600 # Check every hour (in seconds)
+      - PROXY_PATH= # Set if running behind a proxy (e.g., /extractor)
+      # Uncomment and set if using a GitHub repo for config
+      # - CONFIG_REPO=https://github.com/yourusername/docker-extractor-config.git
+    networks:
+      - extractor-network
+
+networks:
+  extractor-network:
+    driver: bridge 
