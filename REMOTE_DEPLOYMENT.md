@@ -32,13 +32,29 @@ This guide explains how to deploy the Docker Binary Extractor on a remote server
 
    Then paste the content from the docker-compose.yml file and save.
 
-4. **Create or copy your config.yaml file**
+4. **Configure your deployment**
 
-   ```bash
-   nano config.yaml
-   ```
-
-   Add your configuration for the Docker images and binaries to extract.
+   The docker-compose.yml file provides three configuration methods:
+   
+   a. **Local configuration file**:
+      ```yaml
+      volumes:
+        - ./config.yaml:/app/config.yaml
+      environment:
+        - CONFIG_PATH=/app/config.yaml
+      ```
+   
+   b. **Direct URL configuration** (recommended):
+      ```yaml
+      environment:
+        - CONFIG_PATH=https://raw.githubusercontent.com/username/repo/branch/config.yaml
+      ```
+   
+   c. **GitHub repository configuration**:
+      ```yaml
+      environment:
+        - CONFIG_REPO=https://github.com/username/repo
+      ```
 
 5. **Create the data directory**
 
@@ -62,14 +78,45 @@ This guide explains how to deploy the Docker Binary Extractor on a remote server
    docker-compose logs -f
    ```
 
-## Configuration Options
+## Configuration Methods
+
+### 1. Local Configuration
+
+This is the traditional method where you create a local `config.yaml` file and mount it into the container. This works well for static configurations.
+
+### 2. Direct URL Configuration (Recommended)
+
+This new method allows you to specify a direct URL to a raw configuration file on GitHub or any other web server.
+
+Example:
+```yaml
+environment:
+  - CONFIG_PATH=https://raw.githubusercontent.com/nullmames/docker-extract/refs/heads/main/config.yaml
+```
+
+Benefits:
+- No need to mount a local config file
+- Configuration is fetched directly from the URL
+- Changes to the URL configuration are detected automatically
+- Supports any raw URL, not just GitHub repositories
+
+### 3. GitHub Repository Configuration
+
+This legacy method fetches the configuration from a GitHub repository. It's less flexible than the direct URL method as it can only use the `config.yaml` file in the main branch.
+
+```yaml
+environment:
+  - CONFIG_REPO=https://github.com/username/repo
+```
+
+## Other Configuration Options
 
 You can customize the deployment by modifying the environment variables in the docker-compose.yml file:
 
 - `MODE`: Set to `extract`, `web`, or `both` (default)
 - `CHECK_INTERVAL`: How often to check for new binaries (in seconds)
-- `CONFIG_REPO`: Optional GitHub repository URL for configuration
 - `PROXY_PATH`: Set if running behind a reverse proxy with a path prefix
+- `DOCKER_PLATFORM_SUPPORT`: Set to `false` if you encounter platform parameter errors
 
 ## Accessing the Web Interface
 
@@ -95,4 +142,30 @@ location /extractor/ {
 }
 ```
 
-Then set `PROXY_PATH=/extractor` in your docker-compose.yml file. 
+Then set `PROXY_PATH=/extractor` in your docker-compose.yml file.
+
+## Troubleshooting
+
+### Platform Parameter Error
+
+If you see errors like:
+```
+Error processing image: run() got an unexpected keyword argument 'platform'
+```
+
+This indicates a compatibility issue between your Docker client version and the Python Docker SDK. To fix this:
+
+1. Set the `DOCKER_PLATFORM_SUPPORT=false` environment variable in your docker-compose.yml file:
+   ```yaml
+   environment:
+     # Other environment variables...
+     - DOCKER_PLATFORM_SUPPORT=false
+   ```
+
+2. Restart the container:
+   ```bash
+   docker-compose down
+   docker-compose up -d
+   ```
+
+This will disable the platform parameter when creating containers, which should resolve the error. 

@@ -4,21 +4,29 @@ services:
   docker-extractor:
     image: ghcr.io/yourusername/docker-extract:latest # Replace with your actual image
     container_name: docker-extractor
+    platform: linux/amd64 # Explicitly set platform to avoid errors
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock # Required for Docker access
       - ./data:/data # Persistent storage for extracted binaries
-      - ./config.yaml:/app/config.yaml # Mount custom config file
+      # Optional: Mount local config file if not using a URL or repo config
+      # - ./config.yaml:/app/config.yaml
     ports:
       - "5050:5050" # Web interface port
     environment:
       - MODE=both # Options: extract, web, both
-      - CONFIG_PATH=/app/config.yaml
+      # Use one of the following configuration methods:
+      # 1. Local config file (default)
+      # - CONFIG_PATH=/app/config.yaml
+      # 2. Direct URL config
+      - CONFIG_PATH=https://raw.githubusercontent.com/nullmames/docker-extract/refs/heads/main/config.yaml
+      # 3. GitHub repository (legacy method)
+      # - CONFIG_REPO=https://github.com/yourusername/docker-extractor-config
       - OUTPUT_DIR=/data
       - CHECK_INTERVAL=3600 # Check every hour (in seconds)
       - PROXY_PATH= # Set if running behind a proxy (e.g., /extractor)
-      # Uncomment and set if using a GitHub repo for config
-      # - CONFIG_REPO=https://github.com/yourusername/docker-extractor-config.git
+      # Add this to disable platform specification in the extractor
+      - DOCKER_PLATFORM_SUPPORT=false
     networks:
       - extractor-network
 

@@ -73,7 +73,11 @@ If you prefer to run the application without Docker:
 
 ## Configuration
 
-The application uses a YAML configuration file to specify which Docker images to extract binaries from. Edit the `config.yaml` file to customize:
+The application uses a YAML configuration file to specify which Docker images to extract binaries from. There are three ways to provide configuration:
+
+### 1. Local Configuration File
+
+Edit the `config.yaml` file to customize:
 
 ```yaml
 networks:
@@ -94,12 +98,30 @@ networks:
 - `docker_image_version`: Docker image tag/version
 - `binary_paths`: Comma-separated list of binary paths to extract
 
-### Using a GitHub Repository for Configuration
+### 2. Direct URL Configuration (Recommended)
 
-You can store your configuration file in a GitHub repository and have the application automatically fetch and use it:
+You can specify a direct URL to a configuration file:
 
+```bash
+docker run -e CONFIG_PATH=https://raw.githubusercontent.com/nullmames/docker-extract/refs/heads/main/config.yaml ...
 ```
-./run.sh --repo https://github.com/username/repo
+
+Or in docker-compose.yml:
+```yaml
+environment:
+  - CONFIG_PATH=https://raw.githubusercontent.com/nullmames/docker-extract/refs/heads/main/config.yaml
+```
+
+This method:
+- Fetches configuration directly from the specified URL
+- Periodically checks for updates
+- Uses HTTP ETag headers to efficiently detect changes
+- Caches the configuration locally
+
+### 3. GitHub Repository Configuration
+
+```bash
+docker run -e CONFIG_REPO=https://github.com/username/repo ...
 ```
 
 This will:
