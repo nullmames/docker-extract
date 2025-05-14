@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  docker-extractor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    container_name: docker-extractor
+    platform: linux/amd64 # Explicitly set platform to avoid errors
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Required for Docker access
+      - ./data:/data # Persistent storage for extracted binaries
+      # Optional: Mount local config file if not using a URL or repo config
+      # - ./config.yaml:/app/config.yaml
+    ports:
+      - "5050:5050" # Web interface port
+    environment:
+      - MODE=both # Options: extract, web, both
+      # Use one of the following configuration methods:
+      # 1. Local config file (default)
+      # - CONFIG_PATH=/app/config.yaml
+      # 2. Direct URL config
+      - CONFIG_PATH=https://raw.githubusercontent.com/nullmames/docker-extract/refs/heads/main/config.yaml
+      # 3. GitHub repository (legacy method)
+      # - CONFIG_REPO=https://github.com/yourusername/docker-extractor-config
+      - OUTPUT_DIR=/data
+      - CHECK_INTERVAL=3600 # Check every hour (in seconds)
+      - PROXY_PATH= # Set if running behind a proxy (e.g., /extractor)
+      # Force AMD64 platform for Docker operations
+      - DOCKER_PLATFORM_SUPPORT=true
+      - DOCKER_DEFAULT_PLATFORM=linux/amd64
+      # Increase log verbosity for debugging 
+      - PYTHONUNBUFFERED=1
+    # Security options - restrict Linux capabilities to minimum required
+    security_opt:
+      - no-new-privileges:true
+      - apparmor:unconfined
+    cap_add:
+      - NET_ADMIN
+    # Healthcheck to monitor container status
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5050/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - extractor-network
+
+networks:
+  extractor-network:
+    driver: bridge 

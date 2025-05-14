@@ -1,0 +1,43 @@
+# Git files
+.git
+.github
+.gitignore
+
+# Python files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Extracted binaries
+extracted_binaries/
+
+# Docker files (except the ones we need)
+.dockerignore
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local configuration
+.env
+.DS_Store 

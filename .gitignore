@@ -1,0 +1,38 @@
+# Python virtual environment
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Extracted binaries
+extracted_binaries/
+
+# Logs
+*.log
+
+# Local configuration
+.DS_Store
+.env
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo data/
