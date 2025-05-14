@@ -212,6 +212,25 @@ class MetadataManager:
         Args:
             new_metadata: New metadata entries to add
         """
-        existing_metadata = self.load_global_metadata()
-        merged_metadata = self.merge_metadata(existing_metadata, new_metadata)
-        self.save_global_metadata(merged_metadata)
+        try:
+            # Ensure new_metadata is a list
+            if isinstance(new_metadata, dict):
+                new_metadata = [new_metadata]
+            elif not isinstance(new_metadata, list):
+                logger.error(f"Invalid metadata type: {type(new_metadata)}")
+                return
+
+            # Filter out any None or invalid values
+            filtered_metadata = [
+                item for item in new_metadata if item and isinstance(item, dict)]
+
+            if not filtered_metadata:
+                logger.info("No valid metadata to update")
+                return
+
+            existing_metadata = self.load_global_metadata()
+            merged_metadata = self.merge_metadata(
+                existing_metadata, filtered_metadata)
+            self.save_global_metadata(merged_metadata)
+        except Exception as e:
+            logger.error(f"Error updating global metadata: {e}")

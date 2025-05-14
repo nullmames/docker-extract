@@ -271,6 +271,14 @@ class DockerExtractor:
             config = self.config_manager.load_config()
             all_metadata = []
 
+            # Check if platform support is disabled via environment variable
+            platform_support = os.environ.get(
+                'DOCKER_PLATFORM_SUPPORT', 'true').lower() != 'false'
+
+            if not platform_support:
+                logger.info(
+                    "Docker platform parameter support is disabled via environment variable")
+
             for network in config.get('networks', []):
                 network_name = network['name']
                 network_dir = os.path.join(self.output_dir, network_name)
@@ -295,11 +303,25 @@ class DockerExtractor:
                         if image is None:
                             continue
 
-                        # Create container with platform specification
-                        container = self.client.containers.create(
-                            f"{docker_image}:{docker_version}",
-                            platform="linux/amd64"
-                        )
+                        # Create container with or without platform specification based on support
+                        if platform_support:
+                            try:
+                                container = self.client.containers.create(
+                                    f"{docker_image}:{docker_version}",
+                                    platform="linux/amd64"
+                                )
+                            except TypeError as e:
+                                # If platform parameter is not supported, try without it
+                                logger.warning(
+                                    f"Platform parameter not supported by Docker SDK: {e}")
+                                container = self.client.containers.create(
+                                    f"{docker_image}:{docker_version}"
+                                )
+                        else:
+                            # Create container without platform specification
+                            container = self.client.containers.create(
+                                f"{docker_image}:{docker_version}"
+                            )
 
                         # Process each binary path
                         successful_paths = []
@@ -365,6 +387,10 @@ class DockerExtractor:
         Args:
             interval: Interval in seconds to check for config changes
         """
+        # Check if platform support is disabled via environment variable
+        platform_support = os.environ.get(
+            'DOCKER_PLATFORM_SUPPORT', 'true').lower() != 'false'
+
         logger.info(f"\n{'='*80}")
         logger.info(f"Docker Binary Extractor")
         logger.info(f"{'='*80}")
@@ -373,7 +399,12 @@ class DockerExtractor:
             logger.info(
                 f"Config repository: {self.config_manager.config_repo}")
         logger.info(f"Output directory: {self.output_dir}")
-        logger.info(f"Platform: linux/amd64 (forced)")
+
+        if platform_support:
+            logger.info(f"Platform: linux/amd64 (forced)")
+        else:
+            logger.info(f"Platform: default (platform parameter disabled)")
+
         logger.info(f"Monitoring interval: {interval} seconds")
         logger.info(f"{'='*80}\n")
 
