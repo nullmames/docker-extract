@@ -72,21 +72,6 @@
             background-color: #45a049;
         }
 
-        .versions-btn {
-            background-color: #2196F3;
-            color: white;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-left: 5px;
-        }
-
-        .versions-btn:hover {
-            background-color: #0b7dda;
-        }
-
         .badge {
             display: inline-block;
             background-color: #607D8B;
@@ -97,13 +82,15 @@
             margin-left: 5px;
         }
 
-        .binary-title {
-            display: flex;
-            align-items: center;
-        }
-
-        .binary-name {
-            font-weight: bold;
+        .code-block {
+            font-family: monospace;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 10px 0;
+            font-size: 14px;
+            overflow-x: auto;
         }
     </style>
 </head>
@@ -113,49 +100,41 @@
     <p>Browse and download binaries extracted from Docker images, organized by network.</p>
 
     {% if networks %}
-    {% for network, binaries in networks.items() %}
+    {% for network_name, versions in networks.items() %}
     <div class="network-section">
-        <h2>{{ network }}</h2>
+        <h2>{{ network_name }} <span class="badge">{{ versions|length }} version{{ 's' if versions|length > 1 else ''
+                }}</span></h2>
+
+        {% if versions and versions[0].docker_image %}
+        <div class="code-block">{{ versions[0].docker_image }}</div>
+        {% endif %}
+
         <table>
             <thead>
                 <tr>
-                    <th>Binary Name</th>
-                    <th>Docker Image</th>
                     <th>Version</th>
                     <th>Size</th>
                     <th>Extraction Date</th>
-                    <th>Hash</th>
-                    <th>Actions</th>
+                    <th>Path(s)</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                {% set displayed_binaries = {} %}
-                {% for binary in binaries %}
-                {% if binary.binary_name not in displayed_binaries %}
-                {% set _ = displayed_binaries.update({binary.binary_name: true}) %}
+                {% for version in versions %}
                 <tr>
-                    <td class="binary-title">
-                        <span class="binary-name">{{ binary.binary_name }}</span>
-                        {% set versions = [] %}
-                        {% for b in binaries %}
-                        {% if b.binary_name == binary.binary_name %}
-                        {% set _ = versions.append(b) %}
-                        {% endif %}
-                        {% endfor %}
-                        <span class="badge">{{ versions|length }} version{{ 's' if versions|length > 1 else '' }}</span>
-                    </td>
-                    <td>{{ binary.docker_image }}</td>
-                    <td>{{ binary.docker_version }}</td>
-                    <td>{{ (binary.size_bytes / 1024)|round(2) }} KB</td>
-                    <td>{{ binary.extraction_date }}</td>
-                    <td>{{ binary.binary_hash }}</td>
+                    <td>{{ version.docker_version }}</td>
+                    <td>{{ (version.total_size / 1048576)|round(2) }} MB</td>
+                    <td>{{ version.extraction_date }}</td>
                     <td>
-                        <a href="/binaries/{{ network }}/{{ binary.binary_name }}" class="download-btn">Download
-                            Latest</a>
-                        <a href="/versions/{{ network }}/{{ binary.binary_name }}" class="versions-btn">All Versions</a>
+                        {% for path in version.binary_paths %}
+                        <div>{{ path }}</div>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <a href="{{ proxy_path }}/download_all_binaries/{{ network_name }}/{{ version.docker_image|urlencode }}/{{ version.docker_version|urlencode }}"
+                            class="download-btn">Download All</a>
                     </td>
                 </tr>
-                {% endif %}
                 {% endfor %}
             </tbody>
         </table>

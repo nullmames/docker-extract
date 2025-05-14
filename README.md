@@ -13,6 +13,9 @@ This application extracts binaries from Docker images and provides a web interfa
 - Web interface to browse and download extracted binaries
 - API endpoint to access binary metadata
 - Detailed metadata including binary name, Docker image, version, size, etc.
+- **Clean download filenames** (e.g., "saharad_0.2.0-testnet-beta.zip" instead of "ghcr.io_saharalabsai_sahara_saharad_0.2.0-testnet-beta_binaries.zip")
+- **Enhanced error handling** for missing binaries
+- **Improved metadata system** that only records successfully extracted binaries
 
 ## Using the Docker Container
 
@@ -96,7 +99,7 @@ networks:
 You can store your configuration file in a GitHub repository and have the application automatically fetch and use it:
 
 ```
-./run_extractor.sh --repo https://github.com/username/repo
+./run.sh --repo https://github.com/username/repo
 ```
 
 This will:
@@ -106,41 +109,29 @@ This will:
 
 ## Usage (for manual installation)
 
-### Extract Binaries
+### Run the Application
 
-Run the extraction script to pull Docker images and extract the binaries:
+Use the provided run script to start the application:
 
 ```
-./run_extractor.sh [options]
-# or
-python docker_extractor.py [options]
+./run.sh [options]
 ```
 
 Available options:
-- `--config FILE`: Configuration file path (default: config.yaml)
-- `--output DIR`: Output directory (default: extracted_binaries)
-- `--repo URL`: GitHub repository URL for configuration
-- `--interval SEC`: Check interval in seconds (default: 60)
+- `-c, --config FILE`: Configuration file path (default: config.yaml)
+- `-o, --output DIR`: Output directory (default: extracted_binaries)
+- `-r, --repo URL`: GitHub repository URL for configuration
+- `-i, --interval SEC`: Check interval in seconds (default: 60)
+- `-p, --port PORT`: Web server port (default: 5050)
+- `-m, --mode MODE`: Operation mode: extract, web, or both (default: both)
+- `-h, --help`: Show help message
 
-This will:
-1. Create a directory `extracted_binaries` with network subdirectories
-2. Extract the specified binaries from the Docker images
-3. Store the binaries in version-specific folders (based on binary hash)
-4. Save metadata for each binary
-5. **Continuously monitor the config file for changes (every 60 seconds)**
-6. **Extract new binaries as they are added to the config file**
+### Operation Modes
 
-### Run the Web Server
-
-Start the web server to browse and download the extracted binaries:
-
-```
-./run_server.sh
-# or
-python web_server.py [port]
-```
-
-The web interface will be available at http://localhost:5050 by default.
+The application can run in three modes:
+1. **Extract mode**: Only extracts binaries from Docker images (`-m extract`)
+2. **Web mode**: Only serves the web interface for existing binaries (`-m web`)
+3. **Both mode**: Extracts binaries and serves the web interface (`-m both`)
 
 ## Versioning System
 
@@ -157,7 +148,7 @@ The application provides a simple API to access binary metadata:
 
 - `GET /api/metadata`: Get metadata for all binaries
 - `GET /api/metadata?network=<network>`: Filter metadata by network
-- `GET /api/metadata?binary_name=<name>`: Filter metadata by binary name
+- `GET /api/metadata?binary_name=<n>`: Filter metadata by binary name
 - `GET /api/metadata?docker_image=<image>`: Filter metadata by Docker image
 - `GET /api/networks`: List all available networks
 
@@ -166,11 +157,19 @@ The application provides a simple API to access binary metadata:
 ```
 .
 ├── config.yaml             # Configuration file
-├── docker_extractor.py     # Script to extract binaries
-├── web_server.py           # Web server
-├── run_extractor.sh        # Script to run the extractor
-├── run_server.sh           # Script to run the web server
-├── venv/                   # Python virtual environment
+├── run.sh                  # Main run script
+├── src/                    # Source code
+│   ├── main.py             # Main entry point
+│   ├── extractor/          # Docker extractor module
+│   │   └── docker_extractor.py  # Docker extraction logic
+│   ├── web/                # Web server module
+│   │   ├── server.py       # Web server implementation
+│   │   ├── api_routes.py   # API routes
+│   │   ├── binary_routes.py # Binary download routes
+│   │   └── ui_routes.py    # UI routes
+│   └── utils/              # Utility modules
+│       ├── helpers.py      # Helper functions
+│       └── config_manager.py # Configuration management
 ├── templates/              # HTML templates
 │   ├── index.html          # Main page template
 │   └── versions.html       # Binary versions page
@@ -182,6 +181,7 @@ The application provides a simple API to access binary metadata:
 │   │   │   └── metadata.yaml # Version-specific metadata
 │   │   └── <hash2>/
 │   └── bitcoin/
+├── venv/                   # Python virtual environment
 └── requirements.txt        # Python dependencies
 ```
 

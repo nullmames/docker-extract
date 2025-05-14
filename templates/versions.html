@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binary Versions - {{ binary_name }}</title>
+    <title>Binary Versions - {{ network }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -81,54 +81,88 @@
             border-radius: 3px;
             margin-left: 5px;
         }
+
+        .code-block {
+            font-family: monospace;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 10px 0;
+            font-size: 14px;
+            overflow-x: auto;
+        }
     </style>
 </head>
 
 <body>
-    <a href="/" class="back-link">← Back to Home</a>
+    <a href="{{ proxy_path }}/" class="back-link">← Back to Home</a>
 
-    <h1>Versions of {{ binary_name }}</h1>
-    <p>Network: {{ network }}</p>
+    <h1>Versions in {{ network }}</h1>
 
     {% if versions %}
+    {% set docker_image = "" %}
+    {% for version in versions %}
+    {% if docker_image == "" %}
+    {% set docker_image = version.docker_image %}
+    {% endif %}
+    {% endfor %}
+
+    <div class="code-block">{{ docker_image }}</div>
+
     <div class="version-list">
         <table>
             <thead>
                 <tr>
                     <th>Version</th>
-                    <th>Docker Image</th>
-                    <th>Docker Version</th>
                     <th>Size</th>
                     <th>Extraction Date</th>
-                    <th>Hash</th>
+                    <th>Paths</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                {% for idx, version in enumerate(versions) %}
+                {% set displayed_images = {} %}
+                {% for version in versions %}
+                {% set image_key = version.docker_image + '|' + version.docker_version %}
+                {% if image_key not in displayed_images %}
+                {% set _ = displayed_images.update({image_key: true}) %}
+
+                {% set related_binaries = [] %}
+                {% set total_size = 0 %}
+                {% set paths = [] %}
+
+                {% for v in versions %}
+                {% if v.docker_image == version.docker_image and v.docker_version == version.docker_version %}
+                {% set _ = related_binaries.append(v) %}
+                {% set total_size = total_size + v.size_bytes %}
+                {% if v.original_path and v.original_path not in paths %}
+                {% set _ = paths.append(v.original_path) %}
+                {% endif %}
+                {% endif %}
+                {% endfor %}
+
                 <tr>
-                    <td>
-                        Version {{ loop.index }}
-                        {% if loop.index == 1 %}
-                        <span class="latest-tag">Latest</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ version.docker_image }}</td>
                     <td>{{ version.docker_version }}</td>
-                    <td>{{ (version.size_bytes / 1024)|round(2) }} KB</td>
+                    <td>{{ (total_size / 1048576)|round(2) }} MB</td>
                     <td>{{ version.extraction_date }}</td>
-                    <td>{{ version.binary_hash }}</td>
                     <td>
-                        <a href="/binaries/{{ network }}/{{ version.binary_hash }}/{{ binary_name }}"
-                            class="download-btn">Download</a>
+                        {% for path in paths %}
+                        <div>{{ path }}</div>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <a href="{{ proxy_path }}/download_all_binaries/{{ network }}/{{ version.docker_image }}/{{ version.docker_version }}"
+                            class="download-btn">Download All</a>
                     </td>
                 </tr>
+                {% endif %}
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% else %}
-    <p>No versions found for this binary.</p>
+    <p>No versions found for this network.</p>
     {% endif %}
 </body>
 

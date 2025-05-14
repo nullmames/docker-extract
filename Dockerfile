@@ -12,10 +12,10 @@ RUN apk add --no-cache \
 
 # Copy application files
 COPY requirements.txt .
-COPY docker_extractor.py .
-COPY web_server.py .
+COPY run.sh .
 COPY config.yaml .
 COPY templates/ ./templates/
+COPY src/ ./src/
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
