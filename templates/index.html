@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Binary Extractor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        h1,
+        h2 {
+            color: #333;
+        }
+
+        .network-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .download-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .download-btn:hover {
+            background-color: #45a049;
+        }
+
+        .versions-btn {
+            background-color: #2196F3;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 5px;
+        }
+
+        .versions-btn:hover {
+            background-color: #0b7dda;
+        }
+
+        .badge {
+            display: inline-block;
+            background-color: #607D8B;
+            color: white;
+            padding: 3px 7px;
+            font-size: 12px;
+            border-radius: 10px;
+            margin-left: 5px;
+        }
+
+        .binary-title {
+            display: flex;
+            align-items: center;
+        }
+
+        .binary-name {
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Docker Binary Extractor</h1>
+    <p>Browse and download binaries extracted from Docker images, organized by network.</p>
+
+    {% if networks %}
+    {% for network, binaries in networks.items() %}
+    <div class="network-section">
+        <h2>{{ network }}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Binary Name</th>
+                    <th>Docker Image</th>
+                    <th>Version</th>
+                    <th>Size</th>
+                    <th>Extraction Date</th>
+                    <th>Hash</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set displayed_binaries = {} %}
+                {% for binary in binaries %}
+                {% if binary.binary_name not in displayed_binaries %}
+                {% set _ = displayed_binaries.update({binary.binary_name: true}) %}
+                <tr>
+                    <td class="binary-title">
+                        <span class="binary-name">{{ binary.binary_name }}</span>
+                        {% set versions = [] %}
+                        {% for b in binaries %}
+                        {% if b.binary_name == binary.binary_name %}
+                        {% set _ = versions.append(b) %}
+                        {% endif %}
+                        {% endfor %}
+                        <span class="badge">{{ versions|length }} version{{ 's' if versions|length > 1 else '' }}</span>
+                    </td>
+                    <td>{{ binary.docker_image }}</td>
+                    <td>{{ binary.docker_version }}</td>
+                    <td>{{ (binary.size_bytes / 1024)|round(2) }} KB</td>
+                    <td>{{ binary.extraction_date }}</td>
+                    <td>{{ binary.binary_hash }}</td>
+                    <td>
+                        <a href="/binaries/{{ network }}/{{ binary.binary_name }}" class="download-btn">Download
+                            Latest</a>
+                        <a href="/versions/{{ network }}/{{ binary.binary_name }}" class="versions-btn">All Versions</a>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p>No binaries have been extracted yet. Run the extraction script first.</p>
+    {% endif %}
+</body>
+
+</html>

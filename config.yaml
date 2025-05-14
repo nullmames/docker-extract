@@ -1,0 +1,6 @@
+networks:
+  - name: "saharad"
+    images:
+      - docker_image: "ghcr.io/saharalabsai/sahara/saharad"
+        docker_image_version: "0.2.0-testnet-beta"
+        binary_paths: "/bin/saharad"
