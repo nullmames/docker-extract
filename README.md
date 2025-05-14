@@ -1,212 +1,242 @@
 # Docker Binary Extractor
 
-This application extracts binaries from Docker images and provides a web interface to browse and download them.
+A tool for extracting binaries from Docker images for analysis and archiving purposes.
+
+## Overview
+
+Docker Binary Extractor is a utility that automatically pulls Docker images, extracts specified binaries, and organizes them for easy access and analysis. It provides both a command-line interface and a web interface for managing and viewing extracted binaries.
 
 ## Features
 
-- Extract binaries from Docker images based on a YAML configuration
-- Organize binaries by network
-- **Continuously monitor config file for changes**
-- **Version control for binaries (keeps old versions)**
-- **Avoids re-downloading existing binaries**
-- **Load configuration from GitHub repositories**
-- Web interface to browse and download extracted binaries
-- API endpoint to access binary metadata
-- Detailed metadata including binary name, Docker image, version, size, etc.
-- **Clean download filenames** (e.g., "saharad_0.2.0-testnet-beta.zip" instead of "ghcr.io_saharalabsai_sahara_saharad_0.2.0-testnet-beta_binaries.zip")
-- **Enhanced error handling** for missing binaries
-- **Improved metadata system** that only records successfully extracted binaries
+- Extract binaries from Docker images based on configuration
+- Organize extracted binaries by network and version
+- Monitor configuration for changes and automatically update
+- Web interface for browsing and downloading extracted binaries
+- API for programmatic access to binary data
+- Support for remote configuration via GitHub repositories
 
-## Using the Docker Container
+## System Requirements
 
-The easiest way to use Docker Binary Extractor is with the pre-built Docker container:
+- Docker
+- Python 3.10+
+- Docker socket access (for extraction functionality)
 
-```bash
-# Run the extractor in extract-only mode:
-docker run -d \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v ./extracted_binaries:/data \
-  -e CONFIG_REPO=https://github.com/nullmames/docker-extract \
-  ghcr.io/nullmames/docker-extract:latest
+## Project Structure
 
-# Run the web server only:
-docker run -d \
-  -p 5050:5050 \
-  -v ./extracted_binaries:/data \
-  -e MODE=web \
-  ghcr.io/nullmames/docker-extract:latest
-
-# Run both extractor and web server:
-docker run -d \
-  -p 5050:5050 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v ./extracted_binaries:/data \
-  -e MODE=both \
-  -e CONFIG_REPO=https://github.com/nullmames/docker-extract \
-  ghcr.io/nullmames/docker-extract:latest
+```
+docker-extract/
+├── src/                      # Main application source code
+│   ├── extractor/            # Binary extraction functionality
+│   ├── web/                  # Web server and API
+│   ├── utils/                # Utility functions
+│   └── main.py               # Application entry point
+├── templates/                # HTML templates for web interface
+├── data/                     # Default data directory
+├── config.yaml               # Configuration file
+├── requirements.txt          # Python dependencies
+├── run.sh                    # Script to run the application
+├── docker-entrypoint.sh      # Docker container entry point
+└── Dockerfile                # Docker image definition
 ```
 
-### Environment Variables
+## Quick Start
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CONFIG_PATH` | Path to configuration file inside container | `/app/config.yaml` |
-| `OUTPUT_DIR` | Directory to store extracted binaries | `/data` |
-| `CONFIG_REPO` | GitHub repository URL for configuration | (empty) |
-| `CHECK_INTERVAL` | Interval to check for config changes (seconds) | `60` |
-| `MODE` | Operation mode: `extract`, `web`, or `both` | `extract` |
+### Local Installation
 
-## Manual Installation
-
-If you prefer to run the application without Docker:
-
-1. Clone this repository
-2. Create and activate a virtual environment:
+1. Clone the repository:
    ```
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   git clone <repository-url>
+   cd docker-extract
    ```
-3. Install the required dependencies:
+
+2. Install dependencies:
    ```
    pip install -r requirements.txt
    ```
 
+3. Create a configuration file (see Configuration section)
+
+4. Run the application:
+   ```
+   ./run.sh
+   ```
+
+### Docker Deployment
+
+1. Build the Docker image:
+   ```
+   docker build -t docker-extract .
+   ```
+
+2. Run the container:
+   ```
+   docker run -d \
+     -v /var/run/docker.sock:/var/run/docker.sock \
+     -v $(pwd)/data:/data \
+     -p 5050:5050 \
+     -e MODE=both \
+     docker-extract
+   ```
+
 ## Configuration
 
-The application uses a YAML configuration file to specify which Docker images to extract binaries from. There are three ways to provide configuration:
+The application is configured using a YAML file. By default, it looks for `config.yaml` in the current directory.
 
-### 1. Local Configuration File
-
-Edit the `config.yaml` file to customize:
+Example configuration:
 
 ```yaml
 networks:
-  - name: "ethereum"
+  - name: network1
     images:
-      - docker_image: "ethereum/client-go"
-        docker_image_version: "latest"
-        binary_paths: "/usr/local/bin/geth"
-  - name: "bitcoin"
+      - docker_image: ubuntu
+        docker_image_version: latest
+        binary_paths: /bin/bash,/bin/ls,/usr/bin/python3
+  - name: network2
     images:
-      - docker_image: "ruimarinho/bitcoin-core"
-        docker_image_version: "latest"
-        binary_paths: "/usr/local/bin/bitcoin-cli,/usr/local/bin/bitcoind"
+      - docker_image: nginx
+        docker_image_version: latest
+        binary_paths: /usr/sbin/nginx,/usr/bin/dumb-init
 ```
 
-- `name`: Network name (used to organize binaries)
-- `docker_image`: Docker image name
-- `docker_image_version`: Docker image tag/version
-- `binary_paths`: Comma-separated list of binary paths to extract
+### Remote Configuration
 
-### 2. Direct URL Configuration (Recommended)
+The application supports loading configuration from remote sources:
 
-You can specify a direct URL to a configuration file:
+1. **GitHub Repository**: Provide a GitHub repository URL with the `--repo` option, and the application will fetch the `config.yaml` file from the repository's main branch.
 
-```bash
-docker run -e CONFIG_PATH=https://raw.githubusercontent.com/nullmames/docker-extract/refs/heads/main/config.yaml ...
-```
+2. **Direct URL**: Set the `CONFIG_PATH` environment variable to a URL, and the application will download the configuration from that URL.
 
-Or in docker-compose.yml:
-```yaml
-environment:
-  - CONFIG_PATH=https://raw.githubusercontent.com/nullmames/docker-extract/refs/heads/main/config.yaml
-```
+The application will cache the remote configuration locally and use ETags to check for changes, minimizing unnecessary downloads.
 
-This method:
-- Fetches configuration directly from the specified URL
-- Periodically checks for updates
-- Uses HTTP ETag headers to efficiently detect changes
-- Caches the configuration locally
+## Command Line Options
 
-### 3. GitHub Repository Configuration
-
-```bash
-docker run -e CONFIG_REPO=https://github.com/username/repo ...
-```
-
-This will:
-1. Fetch the `config.yaml` file from the specified repository
-2. Use that configuration for extracting binaries
-3. Periodically check the repository for configuration updates
-
-## Usage (for manual installation)
-
-### Run the Application
-
-Use the provided run script to start the application:
+The application can be run with the following options:
 
 ```
-./run.sh [options]
+Usage: ./run.sh [options]
+Options:
+  -c, --config FILE     Configuration file (default: config.yaml)
+  -o, --output DIR      Output directory (default: extracted_binaries)
+  -r, --repo URL        GitHub repository URL for configuration
+  -i, --interval SEC    Check interval in seconds (default: 60)
+  -p, --port PORT       Web server port (default: 5050)
+  -m, --mode MODE       Operation mode: extract, web, or both (default: both)
+  -h, --help            Show this help message
 ```
 
-Available options:
-- `-c, --config FILE`: Configuration file path (default: config.yaml)
-- `-o, --output DIR`: Output directory (default: extracted_binaries)
-- `-r, --repo URL`: GitHub repository URL for configuration
-- `-i, --interval SEC`: Check interval in seconds (default: 60)
-- `-p, --port PORT`: Web server port (default: 5050)
-- `-m, --mode MODE`: Operation mode: extract, web, or both (default: both)
-- `-h, --help`: Show help message
+## Operation Modes
 
-### Operation Modes
+- **extract**: Only run the binary extraction functionality
+- **web**: Only run the web server for accessing already extracted binaries
+- **both**: Run both extraction and web server (default)
 
-The application can run in three modes:
-1. **Extract mode**: Only extracts binaries from Docker images (`-m extract`)
-2. **Web mode**: Only serves the web interface for existing binaries (`-m web`)
-3. **Both mode**: Extracts binaries and serves the web interface (`-m both`)
+## Web Interface
 
-## Versioning System
+The web interface is accessible at `http://localhost:5050` (or the configured port) and provides:
 
-The application automatically versions binaries based on their content:
+- Overview of all extracted binaries organized by network
+- Version history for each network
+- Binary download functionality
 
-- Each binary is stored in a directory named after its hash
-- Old versions are preserved when new versions are added
-- The web interface shows the latest version by default
-- Users can view and download all available versions
+## API Endpoints
 
-## API
+The application provides a RESTful API for programmatic access to binary data.
 
-The application provides a simple API to access binary metadata:
+### Metadata API
 
-- `GET /api/metadata`: Get metadata for all binaries
-- `GET /api/metadata?network=<network>`: Filter metadata by network
-- `GET /api/metadata?binary_name=<n>`: Filter metadata by binary name
-- `GET /api/metadata?docker_image=<image>`: Filter metadata by Docker image
-- `GET /api/networks`: List all available networks
+- **GET /api/metadata**
+  - Get metadata for all binaries with optional filtering
+  - Query parameters:
+    - `network`: Filter by network name
+    - `binary_name`: Filter by binary name
+    - `docker_image`: Filter by Docker image
+  - Response: Array of binary metadata objects
 
-## Directory Structure
+- **GET /api/networks**
+  - List all available networks
+  - Response: Array of network names
+
+### Binary Download API
+
+- **GET /binaries/{network}/{binary_name}**
+  - Download the latest version of a binary from a specific network
+  - Response: Binary file content
+
+- **GET /binaries/{network}/{binary_hash}/{binary_name}**
+  - Download a specific version of a binary based on its hash
+  - Response: Binary file content
+
+- **GET /download_all_binaries/{network}/{docker_image}/{docker_version}**
+  - Download all binaries from a specific Docker image as a zip file
+  - Response: ZIP file containing all binaries
+
+## Environment Variables
+
+When running in Docker, the following environment variables can be used:
+
+- `CONFIG_PATH`: Path to the configuration file (default: `/app/config.yaml`)
+- `OUTPUT_DIR`: Directory to store extracted binaries (default: `/data`)
+- `CONFIG_REPO`: GitHub repository URL for remote configuration
+- `CHECK_INTERVAL`: Interval in seconds to check for config changes (default: `60`)
+- `MODE`: Operation mode: `extract`, `web`, or `both` (default: `extract`)
+- `PORT`: Web server port (default: `5050`)
+- `PROXY_PATH`: Base path when running behind a reverse proxy
+- `DOCKER_PLATFORM_SUPPORT`: Enable/disable Docker platform parameter support (default: `true`)
+
+## Advanced Usage
+
+### Running Behind a Reverse Proxy
+
+To run the application behind a reverse proxy with a path prefix:
 
 ```
-.
-├── config.yaml             # Configuration file
-├── run.sh                  # Main run script
-├── src/                    # Source code
-│   ├── main.py             # Main entry point
-│   ├── extractor/          # Docker extractor module
-│   │   └── docker_extractor.py  # Docker extraction logic
-│   ├── web/                # Web server module
-│   │   ├── server.py       # Web server implementation
-│   │   ├── api_routes.py   # API routes
-│   │   ├── binary_routes.py # Binary download routes
-│   │   └── ui_routes.py    # UI routes
-│   └── utils/              # Utility modules
-│       ├── helpers.py      # Helper functions
-│       └── config_manager.py # Configuration management
-├── templates/              # HTML templates
-│   ├── index.html          # Main page template
-│   └── versions.html       # Binary versions page
-├── extracted_binaries/     # Extracted binaries (created on first run)
-│   ├── metadata.yaml       # Global binary metadata
-│   ├── ethereum/           # Network-specific directories
-│   │   ├── <hash1>/        # Version-specific directories
-│   │   │   ├── geth        # Binary file
-│   │   │   └── metadata.yaml # Version-specific metadata
-│   │   └── <hash2>/
-│   └── bitcoin/
-├── venv/                   # Python virtual environment
-└── requirements.txt        # Python dependencies
+docker run -d \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $(pwd)/data:/data \
+  -p 5050:5050 \
+  -e MODE=both \
+  -e PROXY_PATH=/extractor \
+  docker-extract
+```
+
+### Using Remote Configuration
+
+To use a configuration file from a GitHub repository:
+
+```
+./run.sh --repo https://github.com/user/repo --interval 300
+```
+
+To use a direct URL for configuration:
+
+```
+export CONFIG_PATH="https://example.com/path/to/config.yaml"
+./run.sh
+```
+
+## Troubleshooting
+
+### Docker Socket Permissions
+
+If you encounter permission issues with the Docker socket:
+
+```
+chmod 666 /var/run/docker.sock
+```
+
+### Platform Support Issues
+
+If you encounter issues with platform-specific Docker images:
+
+```
+export DOCKER_PLATFORM_SUPPORT=false
+./run.sh
 ```
 
 ## License
 
-MIT 
+[License information]
+
+## Contributing
+
+[Contribution guidelines] 
