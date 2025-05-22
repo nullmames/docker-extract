@@ -5,5 +5,8 @@ networks:
         docker_image_version: "0.2.0-testnet-beta"
         binary_paths: "/bin/saharad"
       - docker_image: "ghcr.io/saharalabsai/sahara/saharad"
+        docker_image_version: "0.2.1-testnet-beta"
+        binary_paths: "/bin/saharad"
+      - docker_image: "ghcr.io/saharalabsai/sahara/saharad"
         docker_image_version: "1.0.0-beta2"
         binary_paths: "/bin/saharad"
